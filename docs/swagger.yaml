@@ -1,0 +1,714 @@
+basePath: /api
+definitions:
+  github_com_dr15_internship-hub-api_internal_models.Application:
+    properties:
+      appliedAt:
+        type: string
+      createdAt:
+        type: string
+      cvFileName:
+        type: string
+      id:
+        type: string
+      major:
+        type: string
+      motivation:
+        type: string
+      phone:
+        type: string
+      semester:
+        type: integer
+      status:
+        $ref: '#/definitions/github_com_dr15_internship-hub-api_internal_models.ApplicationStatus'
+      university:
+        type: string
+      updatedAt:
+        type: string
+      user:
+        $ref: '#/definitions/github_com_dr15_internship-hub-api_internal_models.User'
+      userId:
+        type: string
+      vacancy:
+        $ref: '#/definitions/github_com_dr15_internship-hub-api_internal_models.Vacancy'
+      vacancyId:
+        type: string
+    type: object
+  github_com_dr15_internship-hub-api_internal_models.ApplicationStatus:
+    enum:
+    - submitted
+    - reviewed
+    - accepted
+    - rejected
+    type: string
+    x-enum-varnames:
+    - ApplicationStatusSubmitted
+    - ApplicationStatusReviewed
+    - ApplicationStatusAccepted
+    - ApplicationStatusRejected
+  github_com_dr15_internship-hub-api_internal_models.UnitKerja:
+    properties:
+      createdAt:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  github_com_dr15_internship-hub-api_internal_models.User:
+    properties:
+      createdAt:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      role:
+        $ref: '#/definitions/github_com_dr15_internship-hub-api_internal_models.UserRole'
+      unitKerja:
+        $ref: '#/definitions/github_com_dr15_internship-hub-api_internal_models.UnitKerja'
+      unitKerjaId:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  github_com_dr15_internship-hub-api_internal_models.UserRole:
+    enum:
+    - applicant
+    - unit
+    - central
+    type: string
+    x-enum-varnames:
+    - UserRoleApplicant
+    - UserRoleUnit
+    - UserRoleCentral
+  github_com_dr15_internship-hub-api_internal_models.Vacancy:
+    properties:
+      createdAt:
+        type: string
+      createdBy:
+        type: string
+      deadline:
+        type: string
+      description:
+        type: string
+      duration:
+        type: string
+      id:
+        type: string
+      location:
+        type: string
+      quota:
+        type: integer
+      rejectionNote:
+        type: string
+      requirements:
+        items:
+          type: string
+        type: array
+      status:
+        $ref: '#/definitions/github_com_dr15_internship-hub-api_internal_models.VacancyStatus'
+      title:
+        type: string
+      unitKerja:
+        $ref: '#/definitions/github_com_dr15_internship-hub-api_internal_models.UnitKerja'
+      unitKerjaId:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  github_com_dr15_internship-hub-api_internal_models.VacancyStatus:
+    enum:
+    - draft
+    - pending
+    - approved
+    - rejected
+    type: string
+    x-enum-varnames:
+    - VacancyStatusDraft
+    - VacancyStatusPending
+    - VacancyStatusApproved
+    - VacancyStatusRejected
+  internal_handlers.ApplicationRequest:
+    properties:
+      cvFileName:
+        type: string
+      major:
+        type: string
+      motivation:
+        type: string
+      phone:
+        type: string
+      semester:
+        type: integer
+      university:
+        type: string
+      vacancyId:
+        type: string
+    required:
+    - cvFileName
+    - major
+    - motivation
+    - phone
+    - semester
+    - university
+    - vacancyId
+    type: object
+  internal_handlers.ApplicationReviewRequest:
+    properties:
+      status:
+        $ref: '#/definitions/github_com_dr15_internship-hub-api_internal_models.ApplicationStatus'
+    required:
+    - status
+    type: object
+  internal_handlers.ApprovalRequest:
+    properties:
+      rejectionNote:
+        type: string
+      status:
+        $ref: '#/definitions/github_com_dr15_internship-hub-api_internal_models.VacancyStatus'
+    required:
+    - status
+    type: object
+  internal_handlers.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  internal_handlers.RegisterRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        minLength: 6
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  internal_handlers.VacancyRequest:
+    properties:
+      deadline:
+        type: string
+      description:
+        type: string
+      duration:
+        type: string
+      location:
+        type: string
+      quota:
+        type: integer
+      requirements:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+      unitKerjaId:
+        type: string
+    required:
+    - deadline
+    - description
+    - duration
+    - location
+    - quota
+    - requirements
+    - title
+    - unitKerjaId
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Backend API for Internship Hub Global System
+  title: Internship Hub API
+  version: "1.0"
+paths:
+  /applications:
+    post:
+      consumes:
+      - application/json
+      description: Submit a new internship application for a specific vacancy.
+      parameters:
+      - description: Application submission request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.ApplicationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_dr15_internship-hub-api_internal_models.Application'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Submit an application
+      tags:
+      - Applications
+  /applications/{id}:
+    patch:
+      consumes:
+      - application/json
+      description: Update the status of an application (for Unit Admins).
+      parameters:
+      - description: Application ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Review request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.ApplicationReviewRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Review an application
+      tags:
+      - Applications
+  /applications/my:
+    get:
+      description: Fetch all applications submitted by the currently logged-in applicant.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_dr15_internship-hub-api_internal_models.Application'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List my applications
+      tags:
+      - Applications
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Login to get access token for all user roles
+      parameters:
+      - description: Login request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: User login
+      tags:
+      - Authentication
+  /me:
+    get:
+      description: Fetch profile of the currently logged-in user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_dr15_internship-hub-api_internal_models.User'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get current user profile
+      tags:
+      - Authentication
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new account for an internship applicant
+      parameters:
+      - description: Register request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register a new applicant
+      tags:
+      - Authentication
+  /units:
+    get:
+      description: Fetch all available unit kerja departments
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_dr15_internship-hub-api_internal_models.UnitKerja'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List all unit kerja
+      tags:
+      - Unit Kerja
+  /vacancies:
+    get:
+      description: Fetch all vacancies with 'approved' status. Can be filtered by
+        unitId.
+      parameters:
+      - description: Filter by Unit Kerja ID
+        in: query
+        name: unitId
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_dr15_internship-hub-api_internal_models.Vacancy'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List approved vacancies
+      tags:
+      - Vacancies
+    post:
+      consumes:
+      - application/json
+      description: Create a new internship vacancy (for Unit Admins). Initial status
+        will be 'pending'.
+      parameters:
+      - description: Vacancy creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.VacancyRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_dr15_internship-hub-api_internal_models.Vacancy'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new vacancy
+      tags:
+      - Vacancies
+  /vacancies/{id}:
+    get:
+      description: Fetch detailed information about a specific vacancy
+      parameters:
+      - description: Vacancy ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_dr15_internship-hub-api_internal_models.Vacancy'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get vacancy detail
+      tags:
+      - Vacancies
+  /vacancies/{id}/approve:
+    patch:
+      consumes:
+      - application/json
+      description: Update the status of a vacancy (for Central Admins).
+      parameters:
+      - description: Vacancy ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Approval request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.ApprovalRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Approve or reject a vacancy
+      tags:
+      - Vacancies
+  /vacancies/{vacancyId}/applications:
+    get:
+      description: Fetch all applications for a specific vacancy (for Unit Admins).
+      parameters:
+      - description: Vacancy ID
+        in: path
+        name: vacancyId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_dr15_internship-hub-api_internal_models.Application'
+            type: array
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List vacancy applications (Admin)
+      tags:
+      - Applications
+  /vacancies/admin:
+    get:
+      description: Fetch all vacancies. Unit Admins see their unit's vacancies, Central
+        Admins see all.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_dr15_internship-hub-api_internal_models.Vacancy'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all vacancies (Admin)
+      tags:
+      - Vacancies
+  /vacancies/all:
+    get:
+      description: Fetch all vacancies. Unit Admins see their unit's vacancies, Central
+        Admins see all.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_dr15_internship-hub-api_internal_models.Vacancy'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all vacancies (Admin)
+      tags:
+      - Vacancies
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
