@@ -107,6 +107,7 @@ func (h *Handler) GetUserApplications(c *gin.Context) {
 // @Router /vacancies/{vacancyId}/applications [get]
 func (h *Handler) GetVacancyApplications(c *gin.Context) {
 	vacancyId := c.Param("vacancyId")
+	role, _ := c.Get("role")
 	unitId, _ := c.Get("unitKerjaId")
 
 	vacancy, err := h.VacancyRepo.FindByID(vacancyId)
@@ -116,7 +117,7 @@ func (h *Handler) GetVacancyApplications(c *gin.Context) {
 	}
 
 	// Verify unit admin ownership
-	if unitId != nil && (*unitId.(*uuid.UUID)).String() != vacancy.UnitKerjaID.String() {
+	if role == models.UserRoleUnit && unitId != nil && (*unitId.(*uuid.UUID)).String() != vacancy.UnitKerjaID.String() {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden: vacancy belongs to another unit"})
 		return
 	}
@@ -159,9 +160,10 @@ func (h *Handler) ReviewApplication(c *gin.Context) {
 		return
 	}
 
+	role, _ := c.Get("role")
 	unitId, _ := c.Get("unitKerjaId")
 	// Verify unit admin ownership
-	if unitId != nil && (*unitId.(*uuid.UUID)).String() != application.Vacancy.UnitKerjaID.String() {
+	if role == models.UserRoleUnit && unitId != nil && (*unitId.(*uuid.UUID)).String() != application.Vacancy.UnitKerjaID.String() {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden: application belongs to another unit's vacancy"})
 		return
 	}

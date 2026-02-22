@@ -86,10 +86,11 @@ func (h *Handler) CreateVacancy(c *gin.Context) {
 	}
 
 	userId, _ := c.Get("userId")
+	role, _ := c.Get("role")
 	unitId, _ := c.Get("unitKerjaId")
 
 	// Verify unit admin is creating for their own unit
-	if unitId != nil && (*unitId.(*uuid.UUID)).String() != req.UnitKerjaID.String() {
+	if role == models.UserRoleUnit && unitId != nil && (*unitId.(*uuid.UUID)).String() != req.UnitKerjaID.String() {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden: can only create vacancy for your own unit"})
 		return
 	}

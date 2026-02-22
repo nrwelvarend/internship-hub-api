@@ -91,21 +91,20 @@ func main() {
 			applicant.GET("/applications/my", h.GetUserApplications)
 		}
 
-		// Unit Admin Routes
-		unit := auth.Group("")
-		unit.Use(middleware.RoleMiddleware(models.UserRoleUnit))
+		// Administrative Routes (Both Unit and Central Admins)
+		admin := auth.Group("")
+		admin.Use(middleware.RoleMiddleware(models.UserRoleUnit, models.UserRoleCentral))
 		{
-			unit.POST("/vacancies", h.CreateVacancy)
-			unit.GET("/vacancies/admin", h.GetAllVacanciesAdmin)
-			unit.GET("/vacancies/:id/applications", h.GetVacancyApplications)
-			unit.PATCH("/applications/:id", h.ReviewApplication)
+			admin.POST("/vacancies", h.CreateVacancy)
+			admin.GET("/vacancies/admin", h.GetAllVacanciesAdmin)
+			admin.GET("/vacancies/:id/applications", h.GetVacancyApplications)
+			admin.PATCH("/applications/:id", h.ReviewApplication)
 		}
 
-		// Central Admin Routes
+		// Central Admin Only Routes
 		central := auth.Group("")
 		central.Use(middleware.RoleMiddleware(models.UserRoleCentral))
 		{
-			central.GET("/vacancies/all", h.GetAllVacanciesAdmin)
 			central.PATCH("/vacancies/:id/approve", h.ApproveVacancy)
 		}
 	}
