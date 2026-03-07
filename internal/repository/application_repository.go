@@ -11,8 +11,10 @@ type ApplicationRepository interface {
 	FindByUserAndVacancy(userID, vacancyID uuid.UUID) (models.Application, error)
 	FindByUserID(userID uuid.UUID, page, limit int) ([]models.Application, int64, error)
 	FindByVacancyID(vacancyID string, search string, page, limit int) ([]models.Application, int64, error)
-	UpdateStatus(id string, status models.ApplicationStatus) error
+	UpdateStatus(id string, status models.ApplicationStatus, rejectionNote string) error
 	FindByID(id string) (models.Application, error)
+	CountAcceptedByUser(userID uuid.UUID) (int64, error)
+	Update(app *models.Application) error
 }
 
 type applicationRepository struct {
@@ -62,12 +64,32 @@ func (r *applicationRepository) FindByVacancyID(vacancyID string, search string,
 	return apps, total, err
 }
 
-func (r *applicationRepository) UpdateStatus(id string, status models.ApplicationStatus) error {
-	return r.db.Model(&models.Application{}).Where("id = ?", id).Update("status", status).Error
+func (r *applicationRepository) UpdateStatus(id string, status models.ApplicationStatus, rejectionNote string) error {
+	updates := map[string]interface{}{
+		"status":         status,
+		"rejection_note": rejectionNote,
+	}
+	return r.db.Model(&models.Application{}).Where("id = ?", id).Updates(updates).Error
 }
 
 func (r *applicationRepository) FindByID(id string) (models.Application, error) {
 	var app models.Application
 	err := r.db.Preload("Vacancy").First(&app, "id = ?", id).Error
 	return app, err
+}
+
+func (r *applicationRepository) CountAcceptedByUser(userID uuid.UUID) (int64, error) {
+	var count int64
+	// Check if user has an accepted application for a vacancy that is still ongoing
+	// "Ongoing" is defined as: Current time is before (Deadline + DurationMonths)
+	err := r.db.Model(&models.Application{}).
+		Joins("JOIN vacancies ON vacancies.id = applications.vacancy_id").
+		Where("applications.user_id = ? AND applications.status = ?", userID, models.ApplicationStatusAccepted).
+		Where("(vacancies.deadline + (vacancies.duration_months * INTERVAL '1 month')) > NOW()").
+		Count(&count).Error
+	return count, err
+}
+
+func (r *applicationRepository) Update(app *models.Application) error {
+	return r.db.Save(app).Error
 }

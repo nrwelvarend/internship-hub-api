@@ -25,7 +25,8 @@ type ApplicationRequest struct {
 }
 
 type ApplicationReviewRequest struct {
-	Status models.ApplicationStatus `json:"status" binding:"required"`
+	Status        models.ApplicationStatus `json:"status" binding:"required"`
+	RejectionNote string                   `json:"rejectionNote"`
 }
 
 // SubmitApplication for applicant
@@ -58,10 +59,17 @@ func (h *Handler) SubmitApplication(c *gin.Context) {
 
 	userId, _ := c.Get("userId")
 
-	// Check if already applied
+	// Check if currently in an active internship
+	count, _ := h.ApplicationRepo.CountAcceptedByUser(userId.(uuid.UUID))
+	if count > 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Anda sedang dalam periode magang aktif dan tidak dapat melamar lowongan lain sampai periode tersebut selesai."})
+		return
+	}
+
+	// Check if already applied for this specific vacancy
 	_, err = h.ApplicationRepo.FindByUserAndVacancy(userId.(uuid.UUID), vacancyID)
 	if err == nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "You have already applied for this vacancy"})
+		c.JSON(http.StatusConflict, gin.H{"error": "Anda sudah melamar lowongan ini."})
 		return
 	}
 
@@ -208,7 +216,19 @@ func (h *Handler) ReviewApplication(c *gin.Context) {
 		return
 	}
 
-	if err := h.ApplicationRepo.UpdateStatus(id, req.Status); err != nil {
+	if req.Status == models.ApplicationStatusAccepted {
+		count, err := h.ApplicationRepo.CountAcceptedByUser(application.UserID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check existing accepted applications"})
+			return
+		}
+		if count > 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Applicant is already accepted for another vacancy in this period"})
+			return
+		}
+	}
+
+	if err := h.ApplicationRepo.UpdateStatus(id, req.Status, req.RejectionNote); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update application status"})
 		return
 	}

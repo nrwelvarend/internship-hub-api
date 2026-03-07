@@ -12,14 +12,15 @@ import (
 )
 
 type VacancyRequest struct {
-	Title        string         `json:"title" binding:"required"`
-	UnitKerjaID  uuid.UUID      `json:"unitKerjaId" binding:"required"`
-	Description  string         `json:"description" binding:"required"`
-	Requirements pq.StringArray `json:"requirements" binding:"required"`
-	Duration     string         `json:"duration" binding:"required"`
-	Location     string         `json:"location" binding:"required"`
-	Quota        int            `json:"quota" binding:"required"`
-	Deadline     string         `json:"deadline" binding:"required"`
+	Title          string         `json:"title" binding:"required"`
+	UnitKerjaID    uuid.UUID      `json:"unitKerjaId" binding:"required"`
+	Description    string         `json:"description" binding:"required"`
+	Requirements   pq.StringArray `json:"requirements" binding:"required"`
+	Duration       string         `json:"duration" binding:"required"`
+	DurationMonths int            `json:"durationMonths" binding:"required"`
+	Location       string         `json:"location" binding:"required"`
+	Quota          int            `json:"quota" binding:"required"`
+	Deadline       string         `json:"deadline" binding:"required"`
 }
 
 type ApprovalRequest struct {
@@ -110,16 +111,17 @@ func (h *Handler) CreateVacancy(c *gin.Context) {
 	}
 
 	vacancy := models.Vacancy{
-		Title:        req.Title,
-		UnitKerjaID:  req.UnitKerjaID,
-		Description:  req.Description,
-		Requirements: req.Requirements,
-		Duration:     req.Duration,
-		Location:     req.Location,
-		Quota:        req.Quota,
-		Deadline:     deadline,
-		Status:       models.VacancyStatusPending,
-		CreatedBy:    userId.(uuid.UUID),
+		Title:          req.Title,
+		UnitKerjaID:    req.UnitKerjaID,
+		Description:    req.Description,
+		Requirements:   req.Requirements,
+		Duration:       req.Duration,
+		DurationMonths: req.DurationMonths,
+		Location:       req.Location,
+		Quota:          req.Quota,
+		Deadline:       deadline,
+		Status:         models.VacancyStatusPending,
+		CreatedBy:      userId.(uuid.UUID),
 	}
 
 	if err := h.VacancyRepo.Create(&vacancy); err != nil {

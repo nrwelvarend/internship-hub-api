@@ -24,6 +24,16 @@ const (
 	ApplicationStatusReviewed  ApplicationStatus = "reviewed"
 	ApplicationStatusAccepted  ApplicationStatus = "accepted"
 	ApplicationStatusRejected  ApplicationStatus = "rejected"
+	ApplicationStatusCompleted ApplicationStatus = "completed"
+)
+
+type AttendanceStatus string
+
+const (
+	AttendanceStatusPresent AttendanceStatus = "present"
+	AttendanceStatusSick    AttendanceStatus = "sick"
+	AttendanceStatusLeave   AttendanceStatus = "leave"
+	AttendanceStatusAlpha   AttendanceStatus = "alpha"
 )
 
 type UserRole string
@@ -74,32 +84,67 @@ type UnitKerja struct {
 
 type Vacancy struct {
 	Base
-	Title         string         `json:"title"`
-	UnitKerjaID   uuid.UUID      `json:"unitKerjaId"`
-	UnitKerja     UnitKerja      `json:"unitKerja"`
-	Description   string         `json:"description"`
-	Requirements  pq.StringArray `gorm:"type:text[]" json:"requirements"`
-	Duration      string         `json:"duration"`
-	Location      string         `json:"location"`
-	Quota         int            `json:"quota"`
-	Deadline      time.Time      `json:"deadline"`
-	Status        VacancyStatus  `json:"status"`
-	CreatedBy     uuid.UUID      `json:"createdBy"`
-	RejectionNote string         `json:"rejectionNote,omitempty"`
+	Title          string         `json:"title"`
+	UnitKerjaID    uuid.UUID      `json:"unitKerjaId"`
+	UnitKerja      UnitKerja      `json:"unitKerja"`
+	Description    string         `json:"description"`
+	Requirements   pq.StringArray `gorm:"type:text[]" json:"requirements"`
+	Duration       string         `json:"duration"`
+	DurationMonths int            `json:"durationMonths"`
+	Location       string         `json:"location"`
+	Quota          int            `json:"quota"`
+	Deadline       time.Time      `json:"deadline"`
+	Status         VacancyStatus  `json:"status"`
+	CreatedBy      uuid.UUID      `json:"createdBy"`
+	RejectionNote  string         `json:"rejectionNote,omitempty"`
 }
 
 type Application struct {
 	Base
-	UserID     uuid.UUID         `json:"userId"`
-	User       User              `json:"user"`
-	VacancyID  uuid.UUID         `json:"vacancyId"`
-	Vacancy    Vacancy           `json:"vacancy"`
-	Phone      string            `json:"phone"`
-	University string            `json:"university"`
-	Major      string            `json:"major"`
-	Semester   int               `json:"semester"`
-	Motivation string            `json:"motivation"`
-	CVFileName string            `json:"cvFileName"`
-	Status     ApplicationStatus `json:"status"`
-	AppliedAt  time.Time         `json:"appliedAt"`
+	UserID        uuid.UUID         `json:"userId"`
+	User          User              `json:"user"`
+	VacancyID     uuid.UUID         `json:"vacancyId"`
+	Vacancy       Vacancy           `json:"vacancy"`
+	Phone         string            `json:"phone"`
+	University    string            `json:"university"`
+	Major         string            `json:"major"`
+	Semester      int               `json:"semester"`
+	Motivation    string            `json:"motivation"`
+	CVFileName    string            `json:"cvFileName"`
+	Status        ApplicationStatus `json:"status"`
+	AppliedAt     time.Time         `json:"appliedAt"`
+	RejectionNote string            `json:"rejectionNote,omitempty"`
+}
+
+type Attendance struct {
+	Base
+	UserID        uuid.UUID        `json:"userId"`
+	User          User             `json:"user"`
+	ApplicationID uuid.UUID        `json:"applicationId"`
+	Application   Application      `json:"application"`
+	Date          time.Time        `gorm:"type:date;index:idx_attendance_user_date,unique" json:"date"`
+	CheckIn       *time.Time       `json:"checkIn"`
+	CheckOut      *time.Time       `json:"checkOut"`
+	Status        AttendanceStatus `json:"status"`
+	Notes         string           `json:"notes"`
+}
+
+type InternshipResult struct {
+	Base
+	ApplicationID        uuid.UUID   `gorm:"uniqueIndex" json:"applicationId"`
+	Application          Application `json:"application"`
+	UserID               uuid.UUID   `json:"userId"`
+	User                 User        `json:"user"`
+	AttendanceScore      float64     `json:"attendanceScore"`
+	PerformanceScore     float64     `json:"performanceScore"`
+	ReportScore          float64     `json:"reportScore"`
+	DisciplineScore      float64     `json:"disciplineScore"`
+	OtherScore           float64     `json:"otherScore"`
+	FinalScore           float64     `json:"finalScore"`
+	ReportFileName       string      `json:"reportFileName"`
+	CertificatePath      string      `json:"certificatePath"`
+	CompletionLetterPath string      `json:"completionLetterPath"`
+	ReviewNotes          string      `json:"reviewNotes"`
+	ReviewedBy           uuid.UUID   `json:"reviewedBy"`
+	ReviewedAt           *time.Time  `json:"reviewedAt"`
 }

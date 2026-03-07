@@ -10,6 +10,7 @@ import (
 	"github.com/dr15/internship-hub-api/internal/middleware"
 	"github.com/dr15/internship-hub-api/internal/models"
 	"github.com/dr15/internship-hub-api/internal/repository"
+	"github.com/dr15/internship-hub-api/internal/services"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -38,9 +39,13 @@ func main() {
 	userRepo := repository.NewUserRepository(database.DB)
 	vacancyRepo := repository.NewVacancyRepository(database.DB)
 	appRepo := repository.NewApplicationRepository(database.DB)
+	attendanceRepo := repository.NewAttendanceRepository(database.DB)
+	unitKerjaRepo := repository.NewUnitKerjaRepository(database.DB)
+	resultRepo := repository.NewInternshipResultRepository(database.DB)
+	pdfService := services.NewPDFService("uploads")
 
 	// Initialize Handlers
-	h := handlers.NewHandler(userRepo, vacancyRepo, appRepo)
+	h := handlers.NewHandler(userRepo, vacancyRepo, appRepo, attendanceRepo, unitKerjaRepo, resultRepo, pdfService)
 
 	port := config.AppConfig.ServerPort
 	if port == "" {
@@ -96,6 +101,13 @@ func main() {
 		{
 			applicant.POST("/applications", h.SubmitApplication)
 			applicant.GET("/applications/my", h.GetUserApplications)
+			// Attendance for intern
+			applicant.POST("/attendance/check-in", h.CheckIn)
+			applicant.POST("/attendance/check-out", h.CheckOut)
+			applicant.GET("/attendance/my", h.GetMyAttendance)
+			// Internship Result
+			applicant.POST("/internship/report", h.SubmitReport)
+			applicant.GET("/internship/result/my", h.GetMyInternshipResult)
 		}
 
 		// Administrative Routes (Both Unit and Central Admins)
@@ -106,6 +118,13 @@ func main() {
 			admin.GET("/vacancies/admin", h.GetAllVacanciesAdmin)
 			admin.GET("/vacancies/:id/applications", h.GetVacancyApplications)
 			admin.PATCH("/applications/:id", h.ReviewApplication)
+			// Attendance recap for admin
+			admin.GET("/attendance/recap", h.GetAttendanceRecap)
+			admin.GET("/attendance/recap/:userId", h.GetIndividualRecap)
+			admin.GET("/attendance/export", h.ExportAttendance)
+			// Internship Evaluation
+			admin.GET("/internship/results", h.GetInternshipResultsForAdmin)
+			admin.POST("/internship/results/:id/review", h.ReviewInternship)
 		}
 
 		// Central Admin Only Routes
@@ -113,6 +132,17 @@ func main() {
 		central.Use(middleware.RoleMiddleware(models.UserRoleCentral))
 		{
 			central.PATCH("/vacancies/:id/approve", h.ApproveVacancy)
+
+			// User Management
+			central.GET("/users", h.GetUsers)
+			central.POST("/users", h.CreateUser)
+			central.PUT("/users/:id", h.UpdateUser)
+			central.DELETE("/users/:id", h.DeleteUser)
+
+			// Unit Kerja Management
+			central.POST("/units", h.CreateUnit)
+			central.PUT("/units/:id", h.UpdateUnit)
+			central.DELETE("/units/:id", h.DeleteUnit)
 		}
 	}
 
