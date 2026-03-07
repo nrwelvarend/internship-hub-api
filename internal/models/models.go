@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -49,12 +50,20 @@ func (b *Base) BeforeCreate(tx *gorm.DB) error {
 
 type User struct {
 	Base
-	Name         string    `json:"name"`
-	Email        string    `gorm:"uniqueIndex" json:"email"`
-	Password     string    `json:"-"`
-	Role         UserRole  `json:"role"`
-	UnitKerjaID  *uuid.UUID `json:"unitKerjaId,omitempty"`
-	UnitKerja    *UnitKerja `json:"unitKerja,omitempty"`
+	Name        string     `json:"name"`
+	Email       string     `gorm:"uniqueIndex" json:"email"`
+	Password    string     `json:"-"`
+	Role        UserRole   `json:"role"`
+	UnitKerjaID *uuid.UUID `json:"unitKerjaId,omitempty"`
+	UnitKerja   *UnitKerja `json:"unitKerja,omitempty"`
+	Phone       string     `json:"phone"`
+	Address     string     `json:"address"`
+	KTP         string     `json:"ktp"`
+	University  string     `json:"university"`
+	Major       string     `json:"major"`
+	Semester    int        `json:"semester"`
+	ResetToken  string     `json:"-"`
+	ResetExpiry *time.Time `json:"-"`
 }
 
 type UnitKerja struct {
@@ -65,32 +74,32 @@ type UnitKerja struct {
 
 type Vacancy struct {
 	Base
-	Title         string        `json:"title"`
-	UnitKerjaID   uuid.UUID     `json:"unitKerjaId"`
-	UnitKerja     UnitKerja     `json:"unitKerja"`
-	Description   string        `json:"description"`
-	Requirements  []string      `gorm:"type:text[]" json:"requirements"`
-	Duration      string        `json:"duration"`
-	Location      string        `json:"location"`
-	Quota         int           `json:"quota"`
-	Deadline      time.Time     `json:"deadline"`
-	Status        VacancyStatus `json:"status"`
-	CreatedBy     uuid.UUID     `json:"createdBy"`
-	RejectionNote string        `json:"rejectionNote,omitempty"`
+	Title         string         `json:"title"`
+	UnitKerjaID   uuid.UUID      `json:"unitKerjaId"`
+	UnitKerja     UnitKerja      `json:"unitKerja"`
+	Description   string         `json:"description"`
+	Requirements  pq.StringArray `gorm:"type:text[]" json:"requirements"`
+	Duration      string         `json:"duration"`
+	Location      string         `json:"location"`
+	Quota         int            `json:"quota"`
+	Deadline      time.Time      `json:"deadline"`
+	Status        VacancyStatus  `json:"status"`
+	CreatedBy     uuid.UUID      `json:"createdBy"`
+	RejectionNote string         `json:"rejectionNote,omitempty"`
 }
 
 type Application struct {
 	Base
-	UserID       uuid.UUID         `json:"userId"`
-	User         User              `json:"user"`
-	VacancyID    uuid.UUID         `json:"vacancyId"`
-	Vacancy      Vacancy           `json:"vacancy"`
-	Phone        string            `json:"phone"`
-	University   string            `json:"university"`
-	Major        string            `json:"major"`
-	Semester     int               `json:"semester"`
-	Motivation   string            `json:"motivation"`
-	CVFileName   string            `json:"cvFileName"`
-	Status       ApplicationStatus `json:"status"`
-	AppliedAt    time.Time         `json:"appliedAt"`
+	UserID     uuid.UUID         `json:"userId"`
+	User       User              `json:"user"`
+	VacancyID  uuid.UUID         `json:"vacancyId"`
+	Vacancy    Vacancy           `json:"vacancy"`
+	Phone      string            `json:"phone"`
+	University string            `json:"university"`
+	Major      string            `json:"major"`
+	Semester   int               `json:"semester"`
+	Motivation string            `json:"motivation"`
+	CVFileName string            `json:"cvFileName"`
+	Status     ApplicationStatus `json:"status"`
+	AppliedAt  time.Time         `json:"appliedAt"`
 }

@@ -9,8 +9,8 @@ import (
 type ApplicationRepository interface {
 	Create(app *models.Application) error
 	FindByUserAndVacancy(userID, vacancyID uuid.UUID) (models.Application, error)
-	FindByUserID(userID uuid.UUID) ([]models.Application, error)
-	FindByVacancyID(vacancyID string) ([]models.Application, error)
+	FindByUserID(userID uuid.UUID, page, limit int) ([]models.Application, int64, error)
+	FindByVacancyID(vacancyID string, search string, page, limit int) ([]models.Application, int64, error)
 	UpdateStatus(id string, status models.ApplicationStatus) error
 	FindByID(id string) (models.Application, error)
 }
@@ -33,16 +33,33 @@ func (r *applicationRepository) FindByUserAndVacancy(userID, vacancyID uuid.UUID
 	return app, err
 }
 
-func (r *applicationRepository) FindByUserID(userID uuid.UUID) ([]models.Application, error) {
+func (r *applicationRepository) FindByUserID(userID uuid.UUID, page, limit int) ([]models.Application, int64, error) {
 	var apps []models.Application
-	err := r.db.Preload("Vacancy.UnitKerja").Where("user_id = ?", userID).Order("applied_at desc").Find(&apps).Error
-	return apps, err
+	var total int64
+
+	query := r.db.Model(&models.Application{}).Preload("Vacancy.UnitKerja").Where("user_id = ?", userID)
+
+	query.Count(&total)
+	err := query.Order("applied_at desc").Offset((page - 1) * limit).Limit(limit).Find(&apps).Error
+	return apps, total, err
 }
 
-func (r *applicationRepository) FindByVacancyID(vacancyID string) ([]models.Application, error) {
+func (r *applicationRepository) FindByVacancyID(vacancyID string, search string, page, limit int) ([]models.Application, int64, error) {
 	var apps []models.Application
-	err := r.db.Preload("User").Where("vacancy_id = ?", vacancyID).Order("applied_at desc").Find(&apps).Error
-	return apps, err
+	var total int64
+
+	query := r.db.Model(&models.Application{}).
+		Preload("User").
+		Joins("Join users ON users.id = applications.user_id").
+		Where("vacancy_id = ?", vacancyID)
+
+	if search != "" {
+		query = query.Where("users.name ILIKE ? OR users.email ILIKE ?", "%"+search+"%", "%"+search+"%")
+	}
+
+	query.Count(&total)
+	err := query.Order("applied_at desc").Offset((page - 1) * limit).Limit(limit).Find(&apps).Error
+	return apps, total, err
 }
 
 func (r *applicationRepository) UpdateStatus(id string, status models.ApplicationStatus) error {

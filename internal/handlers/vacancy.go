@@ -5,19 +5,21 @@ import (
 	"time"
 
 	"github.com/dr15/internship-hub-api/internal/models"
+	"github.com/dr15/internship-hub-api/internal/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 type VacancyRequest struct {
-	Title        string    `json:"title" binding:"required"`
-	UnitKerjaID  uuid.UUID `json:"unitKerjaId" binding:"required"`
-	Description  string    `json:"description" binding:"required"`
-	Requirements []string  `json:"requirements" binding:"required"`
-	Duration     string    `json:"duration" binding:"required"`
-	Location     string    `json:"location" binding:"required"`
-	Quota        int       `json:"quota" binding:"required"`
-	Deadline     string    `json:"deadline" binding:"required"`
+	Title        string         `json:"title" binding:"required"`
+	UnitKerjaID  uuid.UUID      `json:"unitKerjaId" binding:"required"`
+	Description  string         `json:"description" binding:"required"`
+	Requirements pq.StringArray `json:"requirements" binding:"required"`
+	Duration     string         `json:"duration" binding:"required"`
+	Location     string         `json:"location" binding:"required"`
+	Quota        int            `json:"quota" binding:"required"`
+	Deadline     string         `json:"deadline" binding:"required"`
 }
 
 type ApprovalRequest struct {
@@ -36,13 +38,19 @@ type ApprovalRequest struct {
 // @Router /vacancies [get]
 func (h *Handler) GetVacancies(c *gin.Context) {
 	unitId := c.Query("unitId")
-	vacancies, err := h.VacancyRepo.FindAll(unitId)
+	search := c.Query("search")
+	pagination := utils.GetPaginationRequest(c)
+
+	vacancies, total, err := h.VacancyRepo.FindAll(unitId, search, pagination.Page, pagination.Limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch vacancies"})
 		return
 	}
 
-	c.JSON(http.StatusOK, vacancies)
+	c.JSON(http.StatusOK, utils.PaginatedResponse{
+		Data: vacancies,
+		Meta: utils.CreatePaginationMeta(total, pagination.Page, pagination.Limit),
+	})
 }
 
 // GetVacancy returns single vacancy detail
@@ -134,20 +142,32 @@ func (h *Handler) CreateVacancy(c *gin.Context) {
 // @Router /vacancies/all [get]
 func (h *Handler) GetAllVacanciesAdmin(c *gin.Context) {
 	role, _ := c.Get("role")
-	unitId, _ := c.Get("unitKerjaId")
+	unitIdCtx, _ := c.Get("unitKerjaId")
+	status := c.Query("status")
+	search := c.Query("search")
+	unitIdQuery := c.Query("unitId")
+	pagination := utils.GetPaginationRequest(c)
 
 	var uid *uuid.UUID
-	if unitId != nil {
-		uid = unitId.(*uuid.UUID)
+	if role == models.UserRoleUnit && unitIdCtx != nil {
+		uid = unitIdCtx.(*uuid.UUID)
+	} else if role == models.UserRoleCentral && unitIdQuery != "" {
+		parsedUid, err := uuid.Parse(unitIdQuery)
+		if err == nil {
+			uid = &parsedUid
+		}
 	}
 
-	vacancies, err := h.VacancyRepo.FindAllAdmin(role.(models.UserRole), uid)
+	vacancies, total, err := h.VacancyRepo.FindAllAdmin(role.(models.UserRole), uid, status, search, pagination.Page, pagination.Limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch vacancies"})
 		return
 	}
 
-	c.JSON(http.StatusOK, vacancies)
+	c.JSON(http.StatusOK, utils.PaginatedResponse{
+		Data: vacancies,
+		Meta: utils.CreatePaginationMeta(total, pagination.Page, pagination.Limit),
+	})
 }
 
 // ApproveVacancy for central admin

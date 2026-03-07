@@ -7,11 +7,11 @@ import (
 )
 
 type VacancyRepository interface {
-	FindAll(unitID string) ([]models.Vacancy, error)
+	FindAll(unitID string, search string, page, limit int) ([]models.Vacancy, int64, error)
 	FindByID(id string) (models.Vacancy, error)
 	Create(vacancy *models.Vacancy) error
 	UpdateStatus(id string, status models.VacancyStatus, rejectionNote string) error
-	FindAllAdmin(role models.UserRole, unitID *uuid.UUID) ([]models.Vacancy, error)
+	FindAllAdmin(role models.UserRole, unitID *uuid.UUID, status string, search string, page, limit int) ([]models.Vacancy, int64, error)
 }
 
 type vacancyRepository struct {
@@ -22,14 +22,21 @@ func NewVacancyRepository(db *gorm.DB) VacancyRepository {
 	return &vacancyRepository{db: db}
 }
 
-func (r *vacancyRepository) FindAll(unitID string) ([]models.Vacancy, error) {
+func (r *vacancyRepository) FindAll(unitID string, search string, page, limit int) ([]models.Vacancy, int64, error) {
 	var vacancies []models.Vacancy
-	query := r.db.Preload("UnitKerja").Where("status = ?", models.VacancyStatusApproved)
+	var total int64
+
+	query := r.db.Model(&models.Vacancy{}).Preload("UnitKerja").Where("status = ?", models.VacancyStatusApproved)
 	if unitID != "" {
 		query = query.Where("unit_kerja_id = ?", unitID)
 	}
-	err := query.Find(&vacancies).Error
-	return vacancies, err
+	if search != "" {
+		query = query.Where("title ILIKE ? OR description ILIKE ?", "%"+search+"%", "%"+search+"%")
+	}
+
+	query.Count(&total)
+	err := query.Offset((page - 1) * limit).Limit(limit).Find(&vacancies).Error
+	return vacancies, total, err
 }
 
 func (r *vacancyRepository) FindByID(id string) (models.Vacancy, error) {
@@ -50,12 +57,22 @@ func (r *vacancyRepository) UpdateStatus(id string, status models.VacancyStatus,
 	return r.db.Model(&models.Vacancy{}).Where("id = ?", id).Updates(updates).Error
 }
 
-func (r *vacancyRepository) FindAllAdmin(role models.UserRole, unitID *uuid.UUID) ([]models.Vacancy, error) {
+func (r *vacancyRepository) FindAllAdmin(role models.UserRole, unitID *uuid.UUID, status string, search string, page, limit int) ([]models.Vacancy, int64, error) {
 	var vacancies []models.Vacancy
-	query := r.db.Preload("UnitKerja")
-	if role == models.UserRoleUnit && unitID != nil {
+	var total int64
+
+	query := r.db.Model(&models.Vacancy{}).Preload("UnitKerja")
+	if unitID != nil {
 		query = query.Where("unit_kerja_id = ?", unitID)
 	}
-	err := query.Order("created_at desc").Find(&vacancies).Error
-	return vacancies, err
+	if status != "" {
+		query = query.Where("status = ?", status)
+	}
+	if search != "" {
+		query = query.Where("title ILIKE ? OR description ILIKE ?", "%"+search+"%", "%"+search+"%")
+	}
+
+	query.Count(&total)
+	err := query.Order("created_at desc").Offset((page - 1) * limit).Limit(limit).Find(&vacancies).Error
+	return vacancies, total, err
 }

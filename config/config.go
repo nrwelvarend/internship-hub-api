@@ -15,6 +15,11 @@ type Config struct {
 	DBName     string
 	JWTSecret  string
 	ServerPort string
+	SMTPHost   string
+	SMTPPort   string
+	SMTPUser   string
+	SMTPPass   string
+	SMTPSender string
 }
 
 var AppConfig *Config
@@ -33,6 +38,11 @@ func LoadConfig() {
 		DBName:     getEnv("DB_NAME", "internship_hub"),
 		JWTSecret:  getEnv("JWT_SECRET", "secret"),
 		ServerPort: getEnv("PORT", "8080"),
+		SMTPHost:   getEnv("SMTP_HOST", "localhost"),
+		SMTPPort:   getEnv("SMTP_PORT", "1025"),
+		SMTPUser:   getEnv("SMTP_USER", ""),
+		SMTPPass:   getEnv("SMTP_PASSWORD", ""),
+		SMTPSender: getEnv("SMTP_SENDER", "no-reply@internshiphub.com"),
 	}
 }
 

@@ -52,6 +52,9 @@ func main() {
 	// Swagger route
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
+	// Static files
+	r.Static("/uploads", "./uploads")
+
 	// CORS Middleware
 	r.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
@@ -72,6 +75,8 @@ func main() {
 	{
 		api.POST("/register", h.Register)
 		api.POST("/login", h.Login)
+		api.POST("/forgot-password", h.ForgotPassword)
+		api.POST("/reset-password", h.ResetPassword)
 		api.GET("/units", h.GetUnits)
 		api.GET("/vacancies", h.GetVacancies)
 		api.GET("/vacancies/:id", h.GetVacancy)
@@ -82,6 +87,8 @@ func main() {
 	auth.Use(middleware.AuthMiddleware())
 	{
 		auth.GET("/me", h.Me)
+		auth.PUT("/me", h.UpdateProfile)
+		auth.POST("/change-password", h.ChangePassword)
 
 		// Applicant Routes
 		applicant := auth.Group("")

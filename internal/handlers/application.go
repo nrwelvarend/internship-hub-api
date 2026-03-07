@@ -2,9 +2,14 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
+	"fmt"
+	"path/filepath"
+
 	"github.com/dr15/internship-hub-api/internal/models"
+	"github.com/dr15/internship-hub-api/internal/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -37,30 +42,55 @@ type ApplicationReviewRequest struct {
 // @Failure 500 {object} map[string]string
 // @Router /applications [post]
 func (h *Handler) SubmitApplication(c *gin.Context) {
-	var req ApplicationRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	vacancyIDStr := c.PostForm("vacancyId")
+	vacancyID, err := uuid.Parse(vacancyIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid vacancy ID"})
 		return
 	}
+
+	phone := c.PostForm("phone")
+	university := c.PostForm("university")
+	major := c.PostForm("major")
+	semesterStr := c.PostForm("semester")
+	semester, _ := strconv.Atoi(semesterStr)
+	motivation := c.PostForm("motivation")
 
 	userId, _ := c.Get("userId")
 
 	// Check if already applied
-	_, err := h.ApplicationRepo.FindByUserAndVacancy(userId.(uuid.UUID), req.VacancyID)
+	_, err = h.ApplicationRepo.FindByUserAndVacancy(userId.(uuid.UUID), vacancyID)
 	if err == nil {
 		c.JSON(http.StatusConflict, gin.H{"error": "You have already applied for this vacancy"})
 		return
 	}
 
+	// Handle File Upload
+	file, err := c.FormFile("cv")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "CV file is required"})
+		return
+	}
+
+	// Create a unique filename
+	ext := filepath.Ext(file.Filename)
+	newFileName := fmt.Sprintf("%s-%d%s", userId.(uuid.UUID).String(), time.Now().Unix(), ext)
+	uploadPath := filepath.Join("uploads", "cv", newFileName)
+
+	if err := c.SaveUploadedFile(file, uploadPath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save CV file"})
+		return
+	}
+
 	application := models.Application{
 		UserID:     userId.(uuid.UUID),
-		VacancyID:  req.VacancyID,
-		Phone:      req.Phone,
-		University: req.University,
-		Major:      req.Major,
-		Semester:   req.Semester,
-		Motivation: req.Motivation,
-		CVFileName: req.CVFileName,
+		VacancyID:  vacancyID,
+		Phone:      phone,
+		University: university,
+		Major:      major,
+		Semester:   semester,
+		Motivation: motivation,
+		CVFileName: newFileName,
 		Status:     models.ApplicationStatusSubmitted,
 		AppliedAt:  time.Now(),
 	}
@@ -84,13 +114,18 @@ func (h *Handler) SubmitApplication(c *gin.Context) {
 // @Router /applications/my [get]
 func (h *Handler) GetUserApplications(c *gin.Context) {
 	userId, _ := c.Get("userId")
-	applications, err := h.ApplicationRepo.FindByUserID(userId.(uuid.UUID))
+	pagination := utils.GetPaginationRequest(c)
+
+	apps, total, err := h.ApplicationRepo.FindByUserID(userId.(uuid.UUID), pagination.Page, pagination.Limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch applications"})
 		return
 	}
 
-	c.JSON(http.StatusOK, applications)
+	c.JSON(http.StatusOK, utils.PaginatedResponse{
+		Data: apps,
+		Meta: utils.CreatePaginationMeta(total, pagination.Page, pagination.Limit),
+	})
 }
 
 // GetVacancyApplications for unit admin to see applicants for a vacancy
@@ -104,31 +139,36 @@ func (h *Handler) GetUserApplications(c *gin.Context) {
 // @Failure 403 {object} map[string]string
 // @Failure 404 {object} map[string]string
 // @Failure 500 {object} map[string]string
-// @Router /vacancies/{vacancyId}/applications [get]
+// @Router /vacancies/{id}/applications [get]
 func (h *Handler) GetVacancyApplications(c *gin.Context) {
-	vacancyId := c.Param("vacancyId")
+	id := c.Param("id")
 	role, _ := c.Get("role")
 	unitId, _ := c.Get("unitKerjaId")
+	pagination := utils.GetPaginationRequest(c)
 
-	vacancy, err := h.VacancyRepo.FindByID(vacancyId)
+	vacancy, err := h.VacancyRepo.FindByID(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Vacancy not found"})
 		return
 	}
 
-	// Verify unit admin ownership
+	// Permission check: Unit admin can only see applications for their own unit's vacancy
 	if role == models.UserRoleUnit && unitId != nil && (*unitId.(*uuid.UUID)).String() != vacancy.UnitKerjaID.String() {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden: vacancy belongs to another unit"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden: can only view applications for your own unit's vacancy"})
 		return
 	}
 
-	applications, err := h.ApplicationRepo.FindByVacancyID(vacancyId)
+	search := c.Query("search")
+	applications, total, err := h.ApplicationRepo.FindByVacancyID(id, search, pagination.Page, pagination.Limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch applications"})
 		return
 	}
 
-	c.JSON(http.StatusOK, applications)
+	c.JSON(http.StatusOK, utils.PaginatedResponse{
+		Data: applications,
+		Meta: utils.CreatePaginationMeta(total, pagination.Page, pagination.Limit),
+	})
 }
 
 // ReviewApplication for unit admin
