@@ -15,12 +15,13 @@ var DB *gorm.DB
 func ConnectDB() {
 	c := config.AppConfig
 
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Jakarta",
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s sslrootcert=./ca.pem TimeZone=Asia/Jakarta",
 		c.DBHost,
 		c.DBUser,
 		c.DBPass,
 		c.DBName,
 		c.DBPort,
+		c.DBSSLMode,
 	)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
